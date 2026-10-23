@@ -1,0 +1,252 @@
+# 語音輸入設定檔
+# 改完存檔後，請從系統匣選單按「結束」再重新啟動，新設定才會套用。
+# （詞庫 dictionary.yaml 之後會支援存檔即自動更新，不用重開，這份設定檔則需要重開。）
+
+# ───────── 熱鍵 ─────────
+hotkey:
+  # 觸發錄音的按鍵，可用：
+  #   capslock、right_alt、left_alt、right_ctrl、left_ctrl、right_shift、
+  #   f1 ~ f24（例如 f13）、mouse_x1、mouse_x2（滑鼠側鍵）、scroll_lock、pause、insert
+  #   也可以直接寫虛擬按鍵碼，例如 "0x14"
+  key: right_ctrl
+  # toggle = 按一下開始、再按一下結束（手不用一直壓著）；hold = 按住說話、放開結束
+  # 跟別的鍵一起按（例如右 Ctrl+C）會當成一般快捷鍵，不會觸發錄音
+  mode: toggle
+  # 按一下模式忘了按結束時，錄超過這個秒數就自動結束並辨識（0 = 不限制）
+  max_record_seconds: 120
+  # 按一下模式：按著超過這個秒數才放開，不算「按一下」（避免按著 Ctrl 做別的事時誤觸）
+  max_tap_seconds: 1.0
+  # 錄音中按 Shift 換模式：按一下＝指令模式、按兩下＝翻譯模式、按三下＝回到一般聽寫
+  # （熱鍵不是 Ctrl 時，可以加一行 translate_modifier: ctrl，改成「錄音中按 Ctrl＝翻譯模式」）
+  # （只用在 hold 模式）按住少於這個秒數視為「短按」：不錄音，CapsLock 照常切換大小寫
+  min_hold_seconds: 0.3
+  # 偵測按鍵的間隔（毫秒），10~20 之間即可
+  poll_interval_ms: 15
+  # 按 Esc 取消本次錄音、或中斷正在處理的這一句
+  esc_cancels: true
+
+# ───────── 錄音 ─────────
+audio:
+  # 麥克風：留空 = 用 Windows 預設的錄音裝置；也可以填裝置名稱的一部分，例如 "MU5000"
+  device: ""
+  # 程式啟動後等幾秒才開麥克風（避開開機時音效服務還在初始化）
+  startup_delay_seconds: 2
+  # 錄音短於這個秒數就略過（避免誤觸）
+  min_duration_seconds: 0.3
+  # 開始／結束錄音時發出提示音
+  beep: true
+
+# ───────── 錄音時自動靜音 ─────────
+# 錄音時把其他程式（音樂、影片、LINE 通知聲…）的聲音關掉，錄完馬上還原。
+# 只動 Windows「音量混合器」裡各程式自己的音量，不動喇叭總音量、語音輸入的提示音和 Windows 系統音效。
+# 也可以從系統匣選單「錄音時自動靜音」隨時開關。
+mute:
+  enabled: true
+  # mute = 完全靜音；lower = 調小聲（調到原本音量的 lower_to_percent %）
+  mode: mute
+  lower_to_percent: 20
+  # 這些程式不動（開會時才聽得到對方）。想讓 LINE 通話、Discord 語音也不被靜音，就把 LINE.exe、Discord.exe 加進來
+  skip_apps: [ms-teams.exe, Teams.exe, Zoom.exe, CptHost.exe, Webex.exe, CiscoCollabHost.exe]
+
+# ───────── 語音辨識 ─────────
+asr:
+  # groq     = Groq 雲端（一樣是 whisper large-v3，一句約 0.4 ~ 0.9 秒，不吃顯示卡；金鑰放 groq_key.txt）
+  #            本機 whisper 會一起載入當備用：斷網、逾時、額度用完時那一句自動改用本機
+  # whisper  = faster-whisper large-v3（本機顯示卡）；capswriter = CapsWriter-Offline 的 Qwen3-ASR
+  # 也可以從系統匣右鍵選單「辨識引擎」臨時切換（重開程式後回到這裡的設定）
+  engine: groq
+  # 選 groq／capswriter 但它啟動失敗時（例如沒有金鑰），自動改用 whisper，不會讓你沒辦法打字
+  fallback_to_whisper: true
+  groq:
+    model: whisper-large-v3      # whisper-large-v3-turbo 快一點點，但實測比較會聽錯
+    timeout_seconds: 5           # 超過這個秒數沒回應，這句改用本機
+  whisper:
+    model: large-v3
+    device: cuda           # cuda = 用顯示卡；失敗會自動改用 CPU
+    compute_type: float16
+    beam_size: 5
+    # 聽不清楚時重跑的「溫度」清單；越短速度越穩定（Whisper 預設會重跑到 1.0，偶爾很慢）
+    temperatures: [0.0, 0.2, 0.4]
+    vad_filter: true
+    language: zh
+    # 給辨識引擎的提示句，讓用字與標點偏向台灣繁體中文
+    initial_prompt: "以下是台灣人說的繁體中文，夾雜一些英文技術名詞，請使用台灣常用的詞彙與全形標點符號。"
+    # CUDA 失敗時改用的 CPU 設定
+    cpu_fallback_model: medium
+    cpu_fallback_compute_type: int8
+  capswriter:
+    host: 127.0.0.1
+    port: 6016
+    language: auto                # auto / chinese / english …（看 CapsWriter 的模型支援）
+    # CapsWriter 伺服器沒在執行時，自動在背景啟動它（只啟動伺服器，不啟動 CapsWriter 自己的客戶端）
+    auto_start_server: true
+    server_exe: 'C:\Users\Administrator\Downloads\CapsWriter-Offline\CapsWriter-Offline-20260914\CapsWriter-Offline\start_server.exe'
+    server_start_timeout: 90      # 等伺服器載入模型最多幾秒
+    timeout_seconds: 15           # 每一句等辨識結果最多幾秒
+
+# ───────── 個人詞庫（內容在 dictionary.yaml，存檔自動生效）─────────
+dictionary:
+  # 「唸起來很像」也替換（例如詞庫寫「克勞德」，辨識成「克老得」也會換成 Claude）
+  fuzzy_match: true
+  # 多像才換：1.0 = 完全同音才換；調低會換得更積極，但也更容易誤換。建議 0.8 ~ 0.9
+  fuzzy_threshold: 0.85
+
+# ───────── AI 校正 ─────────
+corrector:
+  # 系統匣選單也可以隨時開關（選單的開關重開程式後會回到這裡的設定）
+  enabled: true
+  # anthropic = Claude Haiku（雲端，要網路和 API Key，最準）
+  # ollama    = 本機 AI（不用網路、不花錢，要先安裝 Ollama 並下載模型）
+  # 也可以從系統匣右鍵選單「AI 校正來源」臨時切換
+  backend: anthropic
+  # anthropic 用的模型；API Key 放在 api_key.txt
+  #   claude-haiku-5-5 ＝最快（一句約 1 秒）；claude-sonnet-5-5 ＝比較會看上下文修同音錯字，約慢 0.3 秒
+  #   2026-10-22 用 55 句實際紀錄比較後，使用者決定先試 Sonnet
+  model: claude-sonnet-5-5
+  effort: low                   # 短句校正用 low 最快
+  # 超過這個秒數 AI 還沒回來，就直接打出沒經過 AI 的版本（Sonnet 偶爾比較慢，所以從 3 秒放寬到 4 秒）
+  # 講很長的一段會自動多給時間：超過 80 字後，每多 60 字多 1 秒，最多 12 秒
+  timeout_seconds: 4
+  # 刪掉沒意思的語助詞（啊、耶、啦、喔、欸…；「嗎」「呢」「吧」保留）。想保留語氣詞就改成 false
+  remove_particles: true
+  # AI 輸出比原文長超過這個倍數，視為擴寫、不採用
+  max_length_ratio: 1.5
+  # 提供給 AI 參考的「同一個程式裡最近幾句」，以及多久以前的不算
+  history_items: 3
+  history_seconds: 300
+  # 本機 AI 的設定（backend: ollama 時使用）
+  ollama:
+    url: http://127.0.0.1:11434
+    model: qwen2.5:7b           # 先在命令提示字元執行：ollama pull qwen2.5:7b
+
+# ───────── 指令模式 ─────────
+# 錄音中按一下 Shift 就是指令模式：有選取文字就照指令改寫或回答；沒選取就幫你寫或回答。
+# 使用跟 AI 校正同一個 AI（corrector 的設定）。
+command:
+  # AI 超過這個秒數沒回應就放棄（寫長文時需要久一點）
+  timeout_seconds: 20
+  # 指令模式用哪個 Claude 模型。空白＝跟 AI 校正一樣（Haiku，最快）
+  #   claude-sonnet-5-5 ＝比較聰明、稍慢；claude-fable-5-1 ＝最聰明，但最慢、最貴
+  #   （AI 校正來源切到 Ollama 時，指令模式也跟著用 Ollama）
+  #   2026-10-22 實測：Haiku 約 1.7 秒、Sonnet 約 2.3 秒；Sonnet 解釋問題比較正確，所以改用 Sonnet
+  model: claude-sonnet-5-5
+  # 想得多仔細：low 最快；medium、high 比較仔細但比較慢
+  effort: low
+  # off ＝盡量不先思考（最快）；adaptive ＝讓模型自己決定要不要先想一下（Fable 一定會先想）
+  thinking: adaptive
+
+# ───────── 翻譯模式 ─────────
+# 錄音中按兩下 Shift 就是翻譯模式：說中文，打出翻譯好的外文。使用跟 AI 校正同一個 AI。
+translate:
+  # 預設的目標語言（可以自己加，例如 法文、德文、越南文、泰文），系統匣選單「翻譯成」可以切換
+  languages: [英文, 日文, 韓文]
+  # 啟動時翻成哪一種（要是上面清單裡的其中一個）
+  target: 英文
+  # AI 超過這個秒數沒回應，就改打出中文原文
+  timeout_seconds: 8
+
+# ───────── 個人化風格 ─────────
+# 從你說過的話、你自己改過的字，整理出「用字習慣」（存在 style.yaml），AI 校正和指令模式會照著做。
+# 也可以從系統匣選單「個人化風格」隨時開關、「立即整理我的用字習慣」馬上整理一次。
+style:
+  enabled: true
+  # 每說幾句就重新整理一次（每次請 AI 看一次最近的紀錄，會多用一點點 AI 費用）
+  update_every: 30
+  # 至少要有幾句紀錄才開始整理
+  min_samples: 20
+  # 每次整理給 AI 看最近幾句
+  samples_per_update: 120
+  # 最多保留幾句紀錄（存在 logs\style_samples.json，只存文字）
+  max_samples: 300
+  # 整理時 AI 超過這個秒數沒回應就放棄（下次再整理）
+  timeout_seconds: 20
+
+# ───────── 詞庫自動學習 ─────────
+# 發現常被聽錯的詞，右下角跳卡片問你要不要加進詞庫（你按「加入詞庫」才會加）。
+# 也可以從系統匣選單「詞庫自動學習」隨時開關。
+learning:
+  enabled: true
+  # 你自己改過的字：唸起來像（聽錯，例如「深圖→生圖」）就直接學起來，下次自動改對，右下角告訴你、可以按「復原」；
+  # 唸起來不像（可能是改主意，例如「明天→後天」）才跳卡片問你。改成 false ＝ 一律先問
+  auto_from_edits: true
+  # AI 幫你改的：同一個「聽錯 → 改對」改了 ai_min_count 次就問你；唸起來像、改了 ai_auto_count 次就直接學
+  # （唸起來不像的是 AI 在改寫句子，不學也不問）
+  ai_min_count: 2
+  ai_auto_count: 3
+  # 打出來後觀察你有沒有自己改字（只在本機比對，不存檔、不上傳；密碼欄不讀）
+  watch_edits: true
+  # 打完一句後最多觀察幾秒（開始錄下一句時就會提早結束）
+  watch_seconds: 90
+  # 多久讀一次輸入框（秒）
+  poll_seconds: 0.7
+  # 這些程式不觀察「你自己改的字」（終端機裡的文字一直在變，比對沒有意義）
+  skip_apps: [WindowsTerminal.exe, cmd.exe, powershell.exe, pwsh.exe, conhost.exe, OpenConsole.exe,
+              wezterm-gui.exe, mintty.exe, alacritty.exe, mstsc.exe]
+
+# ───────── 場景對照表 ─────────
+# 依目前的程式決定 AI 校正的風格。先比對視窗標題關鍵字，再比對程式名稱；都沒對到就用一般模式。
+# 程式名稱可以在日誌裡看到（每句的「程式：xxx.exe」），想加新的程式就照格式加進去。
+scenes:
+  - name: 技術模式
+    processes: [Code.exe, Cursor.exe, WindowsTerminal.exe, claude.exe, Claude.exe, pycharm64.exe,
+                idea64.exe, devenv.exe, cmd.exe, powershell.exe, pwsh.exe, wezterm-gui.exe, Obsidian.exe]
+    title_keywords: [github, stack overflow, visual studio code]
+    instructions: >-
+      寫程式、下指令或跟 AI 助手對話。英文術語、程式碼關鍵字、函式名稱、檔名、指令一律保留英文原樣，
+      不要翻成中文。只有一句的指令或訊息，句尾不加句號；多句時照常使用標點。
+      口述條列（第一…第二…）排成「1. 」「2. 」的條列，每項一行。
+  - name: 聊天模式
+    processes: [LINE.exe, Telegram.exe, WeChat.exe, WeiXin.exe, Discord.exe, Messenger.exe,
+                WhatsApp.exe, Slack.exe, ms-teams.exe, Teams.exe]
+    title_keywords: [messenger, whatsapp]
+    instructions: >-
+      聊天訊息。保持口語、自然，不要改成書面語。短訊息不加任何標點（問句可以保留問號），
+      句尾一律不加句號；只有很長、需要斷句時才在中間加逗號。不要排成條列。
+      辨識結果裡原本就有的逗號、句號也照這個規則拿掉。
+    no_trailing_period: true
+  - name: 正式模式
+    processes: [OUTLOOK.EXE, olk.exe, WINWORD.EXE, POWERPNT.EXE, EXCEL.EXE, Notion.exe]
+    title_keywords: [gmail, outlook, google 文件, google docs]
+    instructions: >-
+      信件或文件。使用完整的全形標點與書面語，句子通順完整。
+      口述條列（第一…第二…）排成「1. 」「2. 」的條列，每項一行，項目本身不加句號。
+
+# ───────── 簡繁轉換 ─────────
+converter:
+  opencc_config: s2twp
+  # 中文和英文之間自動加一個空格（「改成async」→「改成 async」），數字不加
+  space_between_chinese_english: true
+  # 保護詞：OpenCC 不准改動這些詞（簡體、繁體寫法都認得，輸出照這裡寫的）。
+  # 例如保護「項目」後：講「項目」打出「項目」，講「專案」還是打出「專案」。
+  protect:
+    - 項目
+    - 連接詞
+    - 前後綴
+    - 參數
+    - 台灣
+  # 修正表：OpenCC 轉換「之後」把左邊換成右邊，只用在保護詞處理不了的斷詞錯誤。
+  # 注意：請寫完整的詞，不要只寫單一個字，否則會誤傷其他正確的詞
+  fixes:
+    "這隻能": "這只能"
+    "那隻能": "那只能"
+
+# ───────── 輸出 ─────────
+output:
+  # paste = 剪貼簿貼上（預設，中文最穩）；type = 逐字模擬鍵盤輸入
+  method: paste
+  # 這些程式一律改用逐字輸入（填程序名稱，例如 "mstsc.exe"）
+  type_apps: []
+  # 貼上後等多久才把原本的剪貼簿內容還原（秒）
+  restore_clipboard_delay: 0.3
+  # 貼上前最多等多久讓使用者放開 Ctrl／Alt／Shift 等按鍵（秒）
+  wait_modifiers_timeout: 1.5
+
+# ───────── 介面 ─────────
+ui:
+  # 錄音時在螢幕下方中央顯示浮動小視窗（錄音中、計時、音量條、整理中…）
+  overlay: true
+
+# ───────── 除錯 ─────────
+debug:
+  # 是否把每次的錄音和辨識結果存到 history 資料夾（預設關閉）
+  save_history: false

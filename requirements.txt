@@ -1,0 +1,15 @@
+faster-whisper
+nvidia-cublas-cu12
+sounddevice
+websockets
+numpy
+pystray
+pillow
+pyyaml
+opencc-python-reimplemented
+truststore
+anthropic
+pypinyin
+comtypes
+pycaw
+pytest

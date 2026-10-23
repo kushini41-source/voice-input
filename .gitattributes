@@ -1,0 +1,3 @@
+# Windows 批次檔和 VBS 要保持 CRLF 換行，從 GitHub 下載 ZIP 後才能正常執行
+*.bat -text
+*.vbs -text

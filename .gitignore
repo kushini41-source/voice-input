@@ -1,0 +1,19 @@
+# 金鑰（絕對不能上傳）
+api_key.txt
+groq_key.txt
+azure_key.txt
+
+# 個人詞庫和用字習慣（每台電腦自己學；沒有的話程式會自動建一份預設的）
+dictionary.yaml
+style.yaml
+
+# 每台電腦自己的東西：執行環境、顯示卡檔案（install.bat 會自動產生）、紀錄
+.venv/
+cuda_libs/
+logs/
+history/
+__pycache__/
+.pytest_cache/
+*.tmp
+*.zip
+voice_typer_old.log
